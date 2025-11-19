@@ -1,0 +1,30 @@
+{
+  "name": "metanode-staking",
+  "version": "1.0.0",
+  "description": "MetaNode Staking System",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run deploy.js --network sepolia",
+    "verify:sepolia": "hardhat verify --network sepolia",
+    "node": "hardhat node"
+  },
+  "keywords": [
+    "solidity",
+    "ethereum",
+    "staking",
+    "defi"
+  ],
+  "author": "MetaNode Task",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "hardhat": "^2.17.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.0",
+    "dotenv": "^16.3.1"
+  }
+}
