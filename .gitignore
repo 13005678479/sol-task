@@ -1,0 +1,78 @@
+# Go 编译产物
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work.sum
+
+# Go 依赖和缓存
+vendor/
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node.js (用于 Hardhat/Foundry 项目)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# 环境变量
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Hardhat 文件
+cache/
+artifacts/
+typechain/
+typechain-types/
+coverage/
+coverage.json
+ignition/deployments/
+
+# Foundry 文件
+out/
+lib/
+
+# Solidity 编译产物
+*.abi
+*.bin
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# 备份文件
+*.bak
+*.backup
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+
+# 文档草稿
+*.md.bak
+DRAFT_*
+
+# 测试覆盖率报告
+coverage/
