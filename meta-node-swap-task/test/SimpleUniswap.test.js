@@ -10,24 +10,21 @@ describe("Simple Uniswap DEX", function () {
 
     // 部署TokenA
     const TokenA = await ethers.getContractFactory("ERC20Token");
-    tokenA = await TokenA.deploy("Token A", "TKA", 1000000);
-    await tokenA.deployed();
+    tokenA = await TokenA.deploy("TokenA", "TKA", 1000000);
 
     // 部署TokenB
     const TokenB = await ethers.getContractFactory("ERC20Token");
-    tokenB = await TokenB.deploy("Token B", "TKB", 1000000);
-    await tokenB.deployed();
+    tokenB = await TokenB.deploy("TokenB", "TKB", 1000000);
 
     // 部署流动性池
     const LiquidityPool = await ethers.getContractFactory("LiquidityPool");
-    liquidityPool = await LiquidityPool.deploy(tokenA.address, tokenB.address);
-    await liquidityPool.deployed();
+    liquidityPool = await LiquidityPool.deploy(await tokenA.getAddress(), await tokenB.getAddress());
 
     // 给用户转账一些代币
-    await tokenA.transfer(user1.address, ethers.utils.parseUnits("100000", 18));
-    await tokenB.transfer(user1.address, ethers.utils.parseUnits("100000", 18));
-    await tokenA.transfer(user2.address, ethers.utils.parseUnits("100000", 18));
-    await tokenB.transfer(user2.address, ethers.utils.parseUnits("100000", 18));
+    await tokenA.transfer(user1.address, ethers.parseUnits("100000", 18));
+    await tokenB.transfer(user1.address, ethers.parseUnits("100000", 18));
+    await tokenA.transfer(user2.address, ethers.parseUnits("100000", 18));
+    await tokenB.transfer(user2.address, ethers.parseUnits("100000", 18));
   });
 
   describe("ERC20 Token", function () {
@@ -39,31 +36,31 @@ describe("Simple Uniswap DEX", function () {
     });
 
     it("应该有正确的初始供应量", async function () {
-      const totalSupply = ethers.utils.parseUnits("1000000", 18);
+      const totalSupply = ethers.parseUnits("1000000", 18);
       expect(await tokenA.totalSupply()).to.equal(totalSupply);
       expect(await tokenB.totalSupply()).to.equal(totalSupply);
     });
 
     it("只有所有者可以铸造代币", async function () {
-      const mintAmount = ethers.utils.parseUnits("1000", 18);
+      const mintAmount = ethers.parseUnits("1000", 18);
       await expect(tokenA.mint(user1.address, mintAmount))
         .to.emit(tokenA, "Transfer")
-        .withArgs(ethers.constants.AddressZero, user1.address, mintAmount);
+        .withArgs(ethers.ZeroAddress, user1.address, mintAmount);
     });
   });
 
   describe("Liquidity Pool", function () {
     beforeEach(async function () {
       // 授权流动性池使用代币
-      await tokenA.approve(liquidityPool.address, ethers.utils.parseUnits("500000", 18));
-      await tokenB.approve(liquidityPool.address, ethers.utils.parseUnits("500000", 18));
-      await tokenA.connect(user1).approve(liquidityPool.address, ethers.utils.parseUnits("100000", 18));
-      await tokenB.connect(user1).approve(liquidityPool.address, ethers.utils.parseUnits("100000", 18));
+      await tokenA.approve(await liquidityPool.getAddress(), ethers.parseUnits("500000", 18));
+      await tokenB.approve(await liquidityPool.getAddress(), ethers.parseUnits("500000", 18));
+      await tokenA.connect(user1).approve(await liquidityPool.getAddress(), ethers.parseUnits("100000", 18));
+      await tokenB.connect(user1).approve(await liquidityPool.getAddress(), ethers.parseUnits("100000", 18));
     });
 
     it("应该正确添加初始流动性", async function () {
-      const amountA = ethers.utils.parseUnits("100000", 18);
-      const amountB = ethers.utils.parseUnits("100000", 18);
+      const amountA = ethers.parseUnits("100000", 18);
+      const amountB = ethers.parseUnits("100000", 18);
 
       await expect(liquidityPool.addLiquidity(amountA, amountB))
         .to.emit(liquidityPool, "AddLiquidity")
@@ -79,11 +76,11 @@ describe("Simple Uniswap DEX", function () {
 
     it("多个用户可以添加流动性", async function () {
       // 添加初始流动性
-      const initialAmount = ethers.utils.parseUnits("100000", 18);
+      const initialAmount = ethers.parseUnits("100000", 18);
       await liquidityPool.addLiquidity(initialAmount, initialAmount);
 
       // 用户1添加流动性
-      const userAmount = ethers.utils.parseUnits("10000", 18);
+      const userAmount = ethers.parseUnits("10000", 18);
       await liquidityPool.connect(user1).addLiquidity(userAmount, userAmount);
 
       const [reserve0, reserve1] = await liquidityPool.getReserves();
@@ -93,7 +90,7 @@ describe("Simple Uniswap DEX", function () {
 
     it("用户可以移除流动性", async function () {
       // 添加流动性
-      const amount = ethers.utils.parseUnits("100000", 18);
+      const amount = ethers.parseUnits("100000", 18);
       await liquidityPool.addLiquidity(amount, amount);
 
       const lpBalance = await liquidityPool.balanceOf(owner.address);
@@ -108,11 +105,11 @@ describe("Simple Uniswap DEX", function () {
 
     it("可以计算输出金额", async function () {
       // 添加流动性
-      const amount = ethers.utils.parseUnits("100000", 18);
+      const amount = ethers.parseUnits("100000", 18);
       await liquidityPool.addLiquidity(amount, amount);
 
-      const amountIn = ethers.utils.parseUnits("1000", 18);
-      const path = [tokenA.address, tokenB.address];
+      const amountIn = ethers.parseUnits("1000", 18);
+      const path = [await tokenA.getAddress(), await tokenB.getAddress()];
       const amounts = await liquidityPool.getAmountsOut(amountIn, path);
 
       expect(amounts[0]).to.equal(amountIn);
@@ -122,11 +119,11 @@ describe("Simple Uniswap DEX", function () {
 
     it("可以执行代币交换", async function () {
       // 添加流动性
-      const amount = ethers.utils.parseUnits("100000", 18);
+      const amount = ethers.parseUnits("100000", 18);
       await liquidityPool.addLiquidity(amount, amount);
 
-      const amountIn = ethers.utils.parseUnits("1000", 18);
-      const path = [tokenA.address, tokenB.address];
+      const amountIn = ethers.parseUnits("1000", 18);
+      const path = [await tokenA.getAddress(), await tokenB.getAddress()];
       const amounts = await liquidityPool.getAmountsOut(amountIn, path);
       
       const initialBalanceB = await tokenB.balanceOf(user1.address);
@@ -143,21 +140,21 @@ describe("Simple Uniswap DEX", function () {
     });
 
     it("quote函数应该正确计算价格", async function () {
-      const amountA = ethers.utils.parseUnits("100", 18);
-      const reserveA = ethers.utils.parseUnits("1000", 18);
-      const reserveB = ethers.utils.parseUnits("2000", 18);
+      const amountA = ethers.parseUnits("100", 18);
+      const reserveA = ethers.parseUnits("1000", 18);
+      const reserveB = ethers.parseUnits("2000", 18);
 
       const amountB = await liquidityPool.quote(amountA, reserveA, reserveB);
-      expect(amountB).to.equal(ethers.utils.parseUnits("200", 18));
+      expect(amountB).to.equal(ethers.parseUnits("200", 18));
     });
 
     it("应该拒绝无效的流动性添加", async function () {
       await expect(
-        liquidityPool.addLiquidity(0, ethers.utils.parseUnits("100", 18))
+        liquidityPool.addLiquidity(0, ethers.parseUnits("100", 18))
       ).to.be.revertedWith("Insufficient liquidity amount");
 
       await expect(
-        liquidityPool.addLiquidity(ethers.utils.parseUnits("100", 18), 0)
+        liquidityPool.addLiquidity(ethers.parseUnits("100", 18), 0)
       ).to.be.revertedWith("Insufficient liquidity amount");
     });
 
@@ -170,8 +167,8 @@ describe("Simple Uniswap DEX", function () {
     it("应该拒绝无效的交换路径", async function () {
       await expect(
         liquidityPool.getAmountsOut(
-          ethers.utils.parseUnits("100", 18),
-          [tokenA.address] // 路径太短
+          ethers.parseUnits("100", 18),
+          [await tokenA.getAddress()] // 路径太短
         )
       ).to.be.revertedWith("Invalid path");
     });
@@ -180,16 +177,16 @@ describe("Simple Uniswap DEX", function () {
   describe("Integration Test", function () {
     it("完整的交换流程应该正常工作", async function () {
       // 1. 添加初始流动性
-      const liquidityAmount = ethers.utils.parseUnits("100000", 18);
-      await tokenA.approve(liquidityPool.address, liquidityAmount);
-      await tokenB.approve(liquidityPool.address, liquidityAmount);
+      const liquidityAmount = ethers.parseUnits("100000", 18);
+      await tokenA.approve(await liquidityPool.getAddress(), liquidityAmount);
+      await tokenB.approve(await liquidityPool.getAddress(), liquidityAmount);
       await liquidityPool.addLiquidity(liquidityAmount, liquidityAmount);
 
       // 2. 用户1进行交换
-      const swapAmount = ethers.utils.parseUnits("1000", 18);
-      await tokenA.connect(user1).approve(liquidityPool.address, swapAmount);
+      const swapAmount = ethers.parseUnits("1000", 18);
+      await tokenA.connect(user1).approve(await liquidityPool.getAddress(), swapAmount);
       
-      const path = [tokenA.address, tokenB.address];
+      const path = [await tokenA.getAddress(), await tokenB.getAddress()];
       const amounts = await liquidityPool.getAmountsOut(swapAmount, path);
       
       const initialBalanceB = await tokenB.balanceOf(user1.address);

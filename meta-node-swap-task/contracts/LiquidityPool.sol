@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -38,7 +38,7 @@ contract LiquidityPool is ERC20, Ownable {
     constructor(
         address _token0,
         address _token1
-    ) ERC20("Liquidity Pool Token", "LPT") {
+    ) ERC20("Liquidity Pool Token", "LPT") Ownable(msg.sender) {
         token0 = IERC20(_token0);
         token1 = IERC20(_token1);
     }
@@ -139,7 +139,7 @@ contract LiquidityPool is ERC20, Ownable {
     function _swap(uint[] memory amounts, address[] memory path, address _to) internal {
         for (uint256 i; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
-            (address token0_, ) = sortTokens(input, output);
+            (address token0_, address token1_) = sortTokens(input, output);
             uint256 amount0 = amounts[i] * (input == token0_ ? 1 : 0);
             uint256 amount1 = amounts[i] * (input != token0_ ? 1 : 0);
             
@@ -162,7 +162,7 @@ contract LiquidityPool is ERC20, Ownable {
         revert("Invalid pair");
     }
     
-    function getPairs(address[] memory path) internal pure returns (address[] memory) {
+    function getPairs(address[] memory path) internal view returns (address[] memory) {
         address[] memory pairs = new address[](path.length - 1);
         for (uint256 i = 0; i < path.length - 1; i++) {
             pairs[i] = address(this);
