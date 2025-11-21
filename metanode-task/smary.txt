@@ -1,0 +1,195 @@
+# MetaNode 质押系统项目总结
+
+## 项目概述
+MetaNode 质押系统是一个基于区块链的多代币质押平台，支持用户质押多种代币并获得 MetaNode 代币作为奖励。系统提供多个质押池，每个池可以独立配置质押代币、奖励计算等参数。
+
+## 技术架构
+
+### 开发框架
+- **Hardhat**: 以太坊智能合约开发环境
+- **Solidity**: ^0.8.19 (优化器开启，200次运行)
+- **OpenZeppelin**: 安全可靠的智能合约库
+- **Node.js**: 运行环境
+
+### 核心合约
+
+#### 1. MetaNodeToken.sol
+- **功能**: ERC20奖励代币合约
+- **特性**:
+  - 可设置最大供应量 (Max Supply)
+  - 铸造功能控制 (Minting Control)
+  - 所有者权限管理
+  - 初始供应量配置
+
+#### 2. MetaNodeStaking.sol
+- **功能**: 多代币质押系统合约
+- **特性**:
+  - 多质押池管理
+  - 基于时间和权重的奖励分配
+  - 解质押锁定机制
+  - 暂停/恢复功能
+  - 重入攻击防护
+  - 权限控制
+
+## 数据结构
+
+### Pool (质押池)
+```solidity
+struct Pool {
+    IERC20 stToken;              // 质押代币地址
+    uint256 poolWeight;          // 质押池权重
+    uint256 lastRewardBlock;     // 最后一次计算奖励的区块号
+    uint256 accMetaNodePerST;    // 每个质押代币累积的MetaNode数量
+    uint256 stTokenAmount;       // 池中的总质押代币量
+    uint256 minDepositAmount;    // 最小质押金额
+    uint256 unstakeLockedBlocks; // 解除质押的锁定区块数
+    bool exists;                 // 池是否存在
+}
+```
+
+### User (用户信息)
+```solidity
+struct User {
+    uint256 stAmount;                    // 用户质押的代币数量
+    uint256 finishedMetaNode;            // 已分配的MetaNode数量
+    uint256 pendingMetaNode;             // 待领取的MetaNode数量
+    mapping(uint256 => UnstakeRequest) requests; // 解质押请求
+    uint256[] requestIds;                // 请求ID列表
+}
+```
+
+### UnstakeRequest (解质押请求)
+```solidity
+struct UnstakeRequest {
+    uint256 amount;        // 解质押数量
+    uint256 unlockBlock;   // 解锁区块号
+    bool processed;        // 是否已处理
+}
+```
+
+## 核心功能
+
+### 1. 质押功能 (stake)
+- **输入参数**: 池ID(_pid)，质押数量(_amount)
+- **前置条件**: 用户已授权足够的代币给合约
+- **后置条件**: 用户质押代币数量增加，池总质押量更新
+- **异常处理**: 质押数量低于最小要求时拒绝交易
+
+### 2. 解除质押功能 (unstake)
+- **输入参数**: 池ID(_pid)，解除质押数量(_amount)
+- **前置条件**: 用户质押的代币数量足够
+- **后置条件**: 用户质押代币数量减少，记录解质押请求
+- **锁定机制**: 需等待锁定期结束后才可提取
+
+### 3. 领取奖励 (claimReward)
+- **输入参数**: 池ID(_pid)
+- **前置条件**: 有可领取的奖励
+- **后置条件**: 用户领取奖励，清除已领取记录
+- **异常处理**: 无可领取奖励时不执行操作
+
+### 4. 池管理 (addPool/updatePool)
+- **输入参数**: 
+  - 质押代币地址(_stTokenAddress)
+  - 池权重(_poolWeight)
+  - 最小质押金额(_minDepositAmount)
+  - 解除质押锁定区(_unstakeLockedBlocks)
+- **权限**: 仅管理员可操作
+- **功能**: 创建新池或更新现有池配置
+
+### 5. 合约控制
+- **升级控制**: 仅持有升级角色的账户可执行
+- **暂停/恢复**: 独立控制质押、解除质押、领奖等操作
+
+## 网络配置
+
+### 测试网配置 (基于meme-task项目)
+```javascript
+networks: {
+  // 本地区块链
+  localhost: {
+    url: "http://127.0.0.1:8545",
+    chainId: 31337,
+  },
+  
+  // Sepolia测试网络
+  sepolia: {
+    url: "https://sepolia.infura.io/v3/ea33fc8cbc4545d9ac08fba394c5046b",
+    accounts: [process.env.PRIVATE_KEY],
+    chainId: 11155111,
+  }
+}
+```
+
+### 环境变量配置
+- `SEPOLIA_URL`: Sepolia RPC端点
+- `PRIVATE_KEY`: 部署账户私钥
+- `ETHERSCAN_API_KEY`: Etherscan API密钥
+- `REPORT_GAS`: Gas报告开关
+
+## 部署脚本功能
+
+### 自动化部署流程
+1. **部署MetaNode代币**: 初始供应量1M，最大供应量10M
+2. **部署奖励代币**: 用于测试的ERC20代币，100M初始供应量
+3. **部署质押合约**: 配置每区块1 METANODE的奖励
+4. **创建质押池**:
+   - ETH池: 权重100，最小质押0.1 ETH，锁定100区块
+   - ERC20池: 权重50，最小质押100代币，锁定200区块
+5. **资金配置**: 向质押合约转账100K METANODE作为奖励池
+6. **授权设置**: 为部署者授权代币用于质押测试
+
+### NPM脚本
+```json
+{
+  "compile": "hardhat compile",
+  "test": "hardhat test",
+  "deploy:local": "hardhat run deploy.js --network localhost",
+  "deploy:sepolia": "hardhat run deploy.js --network sepolia",
+  "verify:sepolia": "hardhat verify --network sepolia",
+  "node": "hardhat node"
+}
+```
+
+## 项目依赖
+
+### 开发依赖
+- `@nomicfoundation/hardhat-toolbox`: ^3.0.0
+- `hardhat`: ^2.17.0
+
+### 运行依赖
+- `@openzeppelin/contracts`: ^4.9.0
+- `dotenv`: ^16.3.1
+
+## 安全特性
+
+1. **重入攻击防护**: 使用ReentrancyGuard
+2. **暂停机制**: Pausable合约提供紧急停止功能
+3. **权限控制**: Ownable和多角色权限管理
+4. **输入验证**: 全面的参数验证和错误处理
+5. **锁定机制**: 解质押时间锁定防止立即提取
+
+## 测试建议
+
+1. **单元测试**: 各个函数的独立功能测试
+2. **集成测试**: 完整质押流程测试
+3. **安全测试**: 重入攻击、权限绕过等安全漏洞测试
+4. **Gas优化**: 交易成本分析
+5. **边界测试**: 极值条件下的合约行为
+
+## 部署到Sepolia测试网
+
+1. 配置.env文件中的SEPOLIA_URL和PRIVATE_KEY
+2. 运行: `npm run deploy:sepolia`
+3. 验证合约: `npm run verify:sepolia <contract-address>`
+4. 在Sepolia网上创建自定义ERC20代币作为奖励代币
+5. 进行端到端功能测试
+
+## 项目特点
+
+- **模块化设计**: 清晰的合约分工和数据结构
+- **可扩展性**: 支持动态添加质押池
+- **安全性**: 多层安全防护机制
+- **用户友好**: 直观的质押和解质押流程
+- **自动化**: 完整的部署和配置脚本
+
+项目已完成基础架构设计和核心功能实现，可直接进行测试网部署和功能验证。
