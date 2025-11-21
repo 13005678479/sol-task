@@ -45,8 +45,8 @@ async function main() {
   
   // 显示初始配置
   console.log("\n📋 初始配置:");
-  console.log("  买入税率:", (await memeToken.buyTaxRate()) / 100, "%");
-  console.log("  卖出税率:", (await memeToken.sellTaxRate()) / 100, "%");
+  console.log("  买入税率:", Number(await memeToken.buyTaxRate()) / 100, "%");
+  console.log("  卖出税率:", Number(await memeToken.sellTaxRate()) / 100, "%");
   console.log("  最大交易量:", ethers.formatEther(await memeToken.maxTransactionAmount()), tokenConfig.symbol);
   console.log("  交易状态:", await memeToken.tradingEnabled() ? "已开启" : "未开启");
 
